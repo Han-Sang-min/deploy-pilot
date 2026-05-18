@@ -1,0 +1,14 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# Pinned to an immutable tag in prod (promotion is a deliberate, reviewed step).
+resources:
+  - ../../base
+
+images:
+  - name: ghcr.io/han-sang-min/deploy-pilot
+    newTag: latest
+
+replicas:
+  - name: deploy-pilot
+    count: 3

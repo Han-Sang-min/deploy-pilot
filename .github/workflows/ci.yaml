@@ -1,0 +1,106 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  IMAGE: ghcr.io/${{ github.repository_owner }}/deploy-pilot
+
+jobs:
+  test:
+    name: Lint & Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: gofmt
+        run: test -z "$(gofmt -l .)" || { gofmt -l .; exit 1; }
+
+      - name: go vet
+        run: go vet ./...
+
+      - name: go test
+        run: go test -race -count=1 ./...
+
+  build-scan-push:
+    name: Build, Scan & Push
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Lowercase image name
+        run: echo "IMAGE=$(echo "$IMAGE" | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_ENV"
+
+      - name: Compute tag
+        id: meta
+        run: echo "tag=sha-${GITHUB_SHA::12}" >> "$GITHUB_OUTPUT"
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Build image (load locally for scanning)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: deploy/docker/Dockerfile
+          load: true
+          tags: ${{ env.IMAGE }}:${{ steps.meta.outputs.tag }}
+          build-args: |
+            VERSION=${{ steps.meta.outputs.tag }}
+            COMMIT=${{ github.sha }}
+
+      - name: Trivy vulnerability scan (gate on HIGH/CRITICAL)
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: ${{ env.IMAGE }}:${{ steps.meta.outputs.tag }}
+          format: table
+          exit-code: "1"
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+
+      - name: Log in to GHCR
+        if: github.event_name == 'push'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Push image
+        if: github.event_name == 'push'
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: deploy/docker/Dockerfile
+          push: true
+          tags: |
+            ${{ env.IMAGE }}:${{ steps.meta.outputs.tag }}
+            ${{ env.IMAGE }}:latest
+          build-args: |
+            VERSION=${{ steps.meta.outputs.tag }}
+            COMMIT=${{ github.sha }}
+
+      # WEEK 2 TODO (GitOps auto-bump): after push, patch the image tag in
+      # deploy/k8s/overlays/dev/kustomization.yaml and commit it back so Argo CD
+      # syncs automatically. Recommended: use a deploy key or fim-style PR.
+      # - name: Bump GitOps image tag
+      #   run: |
+      #     cd deploy/k8s/overlays/dev
+      #     kustomize edit set image ${{ env.IMAGE }}=${{ env.IMAGE }}:${{ steps.meta.outputs.tag }}
+      #     git config user.name  "ci-bot"
+      #     git config user.email "ci-bot@users.noreply.github.com"
+      #     git commit -am "ci: bump dev image to ${{ steps.meta.outputs.tag }}"
+      #     git push

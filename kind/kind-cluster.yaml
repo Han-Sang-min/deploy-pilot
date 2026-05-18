@@ -1,0 +1,12 @@
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+name: deploy-pilot
+nodes:
+  - role: control-plane
+    extraPortMappings:
+      # Expose the sample service NodePort on localhost:8080 for demos.
+      - containerPort: 30080
+        hostPort: 8080
+        protocol: TCP
+  - role: worker
+  - role: worker

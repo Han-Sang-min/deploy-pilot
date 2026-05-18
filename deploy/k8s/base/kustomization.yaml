@@ -1,0 +1,21 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: deploy-pilot
+
+resources:
+  - namespace.yaml
+  - deployment.yaml
+  - service.yaml
+  - servicemonitor.yaml
+  - hpa.yaml
+  - pdb.yaml
+
+images:
+  - name: ghcr.io/han-sang-min/deploy-pilot
+    newTag: latest
+
+labels:
+  - pairs:
+      app.kubernetes.io/part-of: deploy-pilot
+    includeSelectors: false

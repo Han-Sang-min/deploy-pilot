@@ -1,0 +1,15 @@
+/bin/
+*.test
+*.out
+
+# Terraform
+infra/terraform/.terraform/
+infra/terraform/*.tfstate
+infra/terraform/*.tfstate.*
+infra/terraform/.terraform.lock.hcl
+*.tfplan
+
+# Local
+.DS_Store
+*.local
+kubeconfig

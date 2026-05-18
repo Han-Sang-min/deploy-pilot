@@ -1,0 +1,43 @@
+# PrometheusRule picked up by kube-prometheus-stack (label release=kube-prom-stack).
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: deploy-pilot-rules
+  namespace: monitoring
+  labels:
+    release: kube-prom-stack
+spec:
+  groups:
+    - name: deploy-pilot.slo
+      rules:
+        - alert: DeployPilotHighErrorRate
+          expr: |
+            sum(rate(http_requests_total{route!="/metrics",status=~"5.."}[5m]))
+              /
+            sum(rate(http_requests_total{route!="/metrics"}[5m])) > 0.05
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: "deploy-pilot 5xx error ratio above 5%"
+            runbook: "runbooks/high-error-rate.md"
+
+        - alert: DeployPilotHighLatencyP99
+          expr: |
+            histogram_quantile(0.99,
+              sum(rate(http_request_duration_seconds_bucket{route!="/metrics"}[5m])) by (le)
+            ) > 1
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: "deploy-pilot p99 latency above 1s"
+            runbook: "runbooks/cpu-spike.md"
+
+        - alert: DeployPilotTargetDown
+          expr: up{job=~".*deploy-pilot.*"} == 0
+          for: 2m
+          labels:
+            severity: critical
+          annotations:
+            summary: "deploy-pilot scrape target is down"

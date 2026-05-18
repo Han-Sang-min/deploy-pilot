@@ -1,0 +1,17 @@
+# Scraped by kube-prometheus-stack. The `release` label must match the stack's
+# serviceMonitorSelector (default: release=kube-prom-stack).
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: deploy-pilot
+  labels:
+    app.kubernetes.io/name: deploy-pilot
+    release: kube-prom-stack
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: deploy-pilot
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: 15s

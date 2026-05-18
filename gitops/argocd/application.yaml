@@ -1,0 +1,27 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: deploy-pilot-dev
+  namespace: argocd
+spec:
+  project: deploy-pilot
+  source:
+    # TODO: replace with your fork URL once pushed to GitHub.
+    repoURL: https://github.com/Han-Sang-min/deploy-pilot.git
+    targetRevision: main
+    path: deploy/k8s/overlays/dev
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: deploy-pilot
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+    retry:
+      limit: 3
+      backoff:
+        duration: 10s
+        factor: 2
+        maxDuration: 2m

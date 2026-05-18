@@ -1,0 +1,19 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: deploy-pilot
+  namespace: argocd
+spec:
+  description: deploy-pilot reference platform
+  sourceRepos:
+    # TODO: replace with your fork URL once pushed to GitHub.
+    - https://github.com/Han-Sang-min/deploy-pilot.git
+  destinations:
+    - server: https://kubernetes.default.svc
+      namespace: deploy-pilot
+  clusterResourceWhitelist:
+    - group: ""
+      kind: Namespace
+  namespaceResourceWhitelist:
+    - group: "*"
+      kind: "*"

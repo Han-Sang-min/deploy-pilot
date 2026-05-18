@@ -1,0 +1,13 @@
+.git
+.github
+bin
+*.md
+docs
+runbooks
+postmortems
+infra
+gitops
+observability
+deploy/k8s
+kind
+tools

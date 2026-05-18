@@ -1,0 +1,27 @@
+# Reference Alertmanager routing. Apply via the kube-prometheus-stack
+# alertmanagerConfig CRD or Helm values. The webhook receiver is a placeholder —
+# swap for Slack/Discord/email when you wire a real channel.
+apiVersion: monitoring.coreos.com/v1alpha1
+kind: AlertmanagerConfig
+metadata:
+  name: deploy-pilot
+  namespace: monitoring
+  labels:
+    release: kube-prom-stack
+spec:
+  route:
+    receiver: default
+    groupBy: ["alertname"]
+    groupWait: 30s
+    groupInterval: 5m
+    repeatInterval: 3h
+    routes:
+      - matchers:
+          - name: severity
+            value: critical
+        receiver: default
+        repeatInterval: 1h
+  receivers:
+    - name: default
+      webhookConfigs:
+        - url: "http://example.invalid/alertmanager" # TODO: real channel
